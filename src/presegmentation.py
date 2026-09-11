@@ -12,7 +12,7 @@ def presegmentar_superpixeles(imagen: np.ndarray, n_segmentos: int = 100, m: flo
     return regiones
 
 def region_a_recorte_rgb(imagen: np.ndarray, mascara: np.ndarray) -> np.ndarray:
-    """Convierte una máscara booleana (tamaño completo) en un recorte RGB (bounding box)."""
+    # convierte una mascara booleana (tamaño completo) en un recorte RGB
     filas, columnas = np.where(mascara)
     y0, y1 = filas.min(), filas.max() + 1
     x0, x1 = columnas.min(), columnas.max() + 1
