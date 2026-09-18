@@ -2,5 +2,5 @@
 
 ## Proyecto 1 - Segmentación
 
+<img width="960" height="540" alt="LabRes_QFT-medical-segmentation" src="https://github.com/user-attachments/assets/2a2042eb-b469-4488-a1ab-b3e9efc040c7" />
 
-<img width="1600" height="400" alt="image" src="https://github.com/user-attachments/assets/7ffe4435-7f29-44cd-bffe-af3d4f81e1ea" />
