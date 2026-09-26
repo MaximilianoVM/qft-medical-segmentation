@@ -63,39 +63,53 @@ def rgb_a_cuaternion(imagen_rgb: np.ndarray) -> np.ndarray:
 
     return q_img
 
+def _qft_canal_real(canal: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Calcula la QFT 2D de un solo canal real (Ecuación 6 del paper).
+
+    F(u,v) = R + iI + jJ + kK, obtenida como transformada en cascada:
+    primero sobre `y` con la unidad j, luego sobre `x` con la unidad i.
+
+    Retorna las 4 componentes reales (R, I, J, K), cada una (M, N).
+    """
+    # Paso sobre el eje y (unidad j): Gc - j*Gs
+    Fy = np.fft.fft(canal, axis=1)
+    Gc = Fy.real
+    Gs = -Fy.imag
+
+    # Paso sobre el eje x (unidad i)
+    Fx_Gc = np.fft.fft(Gc, axis=0)
+    Fx_Gs = np.fft.fft(Gs, axis=0)
+
+    R = Fx_Gc.real
+    I = Fx_Gc.imag
+    J = -Fx_Gs.real
+    K = -Fx_Gs.imag
+    return R, I, J, K
 
 def qft_2d_region(submatriz_q: np.ndarray) -> np.ndarray:
-    """
-    Paso 3: Calcula la Transformada Cuaterniónica de Fourier 2D (QFT)
-    sobre una submatriz de cuaterniones de dimensiones (M, N, 4).
-
-    Para un cuaternión q = w + x*i + y*j + z*k, la QFT bidimensional
-    se calcula descomponiendo las 4 componentes imaginarias independientes
-    mediante la Transformada Discreta de Fourier 2D (FFT2).
-
-    Parámetros:
-        submatriz_q (np.ndarray): Submatriz de dimensiones (M, N, 4) con cuaterniones.
-
-    Retorna:
-        np.ndarray: Espectro frecuencial cuaterniónico F_q de dimensiones (M, N, 4)
-                    con valores complejos en cada componente (w, x, y, z).
-    """
-    if submatriz_q.ndim != 3 or submatriz_q.shape[2] != 4:
-        raise ValueError(f"Se esperaba una submatriz de forma (M, N, 4), pero se recibió {submatriz_q.shape}.")
-
     M, N, _ = submatriz_q.shape
     if M == 0 or N == 0:
         raise ValueError("La submatriz no puede tener dimensiones nulas.")
 
-    # FFT2 independiente sobre cada canal cuaterniónico (w, x, y, z)
-    F_w = np.fft.fft2(submatriz_q[:, :, 0])
-    F_x = np.fft.fft2(submatriz_q[:, :, 1])
-    F_y = np.fft.fft2(submatriz_q[:, :, 2])
-    F_z = np.fft.fft2(submatriz_q[:, :, 3])
+    # Canales de color (guardados como i, j, k en el cuaternión puro de entrada)
+    canal_R = submatriz_q[:, :, 1]
+    canal_G = submatriz_q[:, :, 2]
+    canal_B = submatriz_q[:, :, 3]
 
-    # Ensamblar el espectro frecuencial cuaterniónico y normalizar por 1/sqrt(M*N)
+    # QFT de cada canal por separado (Ecuación 6): cada uno da (R_i, I_i, J_i, K_i)
+    R1, I1, J1, K1 = _qft_canal_real(canal_R)
+    R2, I2, J2, K2 = _qft_canal_real(canal_G)
+    R3, I3, J3, K3 = _qft_canal_real(canal_B)
+
+    # Combinación de los 3 canales en un solo cuaternión (Ecuación 10)
+    w = -I1 - J2 + K3
+    x = R1 - K2 - J3
+    y = -K1 + R2 - I3
+    z = J1 + I2 + R3
+
     factor_norm = 1.0 / np.sqrt(M * N)
-    F_q = np.stack([F_w, F_x, F_y, F_z], axis=-1) * factor_norm
+    F_q = np.stack([w, x, y, z], axis=-1) * factor_norm
 
     return F_q
 
