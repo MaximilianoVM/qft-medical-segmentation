@@ -37,7 +37,8 @@ def test_qft_2d_region_dimensiones():
     spectrum = qft_2d_region(q_sub)
 
     assert spectrum.shape == (20, 20, 4)
-    assert np.iscomplexobj(spectrum)
+    assert not np.iscomplexobj(spectrum)   # cambia esta línea
+    assert spectrum.dtype == np.float64    # opcional, más estricto
 
 
 def test_procesar_qft_superpixeles_integracion():
