@@ -132,6 +132,11 @@ def test_entrenar_modelo_aprende_separacion_simple(datos_sinteticos):
     y_pred = modelo.predict(X)
     exactitud = np.mean(y_pred == y)
     assert exactitud > 0.9
+    
+def test_entrenar_modelo_class_weight_balanced(datos_sinteticos):
+    X, y = datos_sinteticos
+    modelo = entrenar_modelo(X, y, tipo_modelo="random_forest", class_weight="balanced")
+    assert modelo.class_weight == "balanced"
 
 
 # ---------------------------------------------------------------------------

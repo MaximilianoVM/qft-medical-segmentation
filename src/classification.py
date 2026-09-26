@@ -52,13 +52,13 @@ def etiquetar_superpixeles(regiones_sp: list[np.ndarray], mascara: np.ndarray, u
 
 
 _MODELOS_DISPONIBLES = {
-    "svm": lambda: SVC(kernel="rbf", random_state=42),
-    "knn": lambda: KNeighborsClassifier(n_neighbors=5),
-    "random_forest": lambda: RandomForestClassifier(random_state=42),
+    "svm": lambda class_weight=None: SVC(kernel="rbf", random_state=42, class_weight=class_weight),
+    "knn": lambda class_weight=None: KNeighborsClassifier(n_neighbors=5),  # KNN no soporta class_weight
+    "random_forest": lambda class_weight=None: RandomForestClassifier(random_state=42, class_weight=class_weight),
 }
 
 
-def entrenar_modelo(X: np.ndarray, y: np.ndarray, tipo_modelo: str = "svm"):
+def entrenar_modelo(X: np.ndarray, y: np.ndarray, tipo_modelo: str = "svm", class_weight: str | None = None):
     """
     Paso 7: Entrena un clasificador sobre la matriz de características X
     y las etiquetas y, y lo devuelve ya entrenado.
@@ -67,6 +67,8 @@ def entrenar_modelo(X: np.ndarray, y: np.ndarray, tipo_modelo: str = "svm"):
         X (np.ndarray): matriz de características (K x F).
         y (np.ndarray): vector de etiquetas (K,).
         tipo_modelo (str): "svm", "knn" o "random_forest".
+        class_weight (str | None): "balanced" para compensar clases
+            desbalanceadas (no soportado por knn, se ignora si se pasa).
 
     Retorna:
         Clasificador de scikit-learn ya entrenado (método .fit ya llamado).
@@ -77,7 +79,7 @@ def entrenar_modelo(X: np.ndarray, y: np.ndarray, tipo_modelo: str = "svm"):
             f"Usar uno de: {list(_MODELOS_DISPONIBLES.keys())}."
         )
 
-    modelo = _MODELOS_DISPONIBLES[tipo_modelo]()
+    modelo = _MODELOS_DISPONIBLES[tipo_modelo](class_weight=class_weight) 
     modelo.fit(X, y)
     return modelo
 
