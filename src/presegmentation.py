@@ -1,8 +1,8 @@
 import numpy as np
 from src.slic_custom import slic as slic_custom
 
-def presegmentar_ventanas(imagen: np.ndarray, tam_ventana: int = 16) -> list[np.ndarray]:
-    pass
+#def presegmentar_ventanas(imagen: np.ndarray, tam_ventana: int = 16) -> list[np.ndarray]:
+#    pass
 
 def presegmentar_superpixeles(imagen: np.ndarray, n_segmentos: int = 100, m: float = 10, num_iters: int = 10) -> list[np.ndarray]:
     # aplicamos nuestra SLIC. Devuelve lista de máscaras booleanas
