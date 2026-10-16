@@ -1,7 +1,7 @@
 name: labres_qft
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python=3.10
   - numpy
@@ -11,3 +11,7 @@ dependencies:
   - matplotlib
   - pytest
   - Pillow
+  - typer 
+  - rich 
+  - joblib
+  - streamlit
