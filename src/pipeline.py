@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rich.console import Console
 from rich.table import Table
+import gc
 
 # Módulos del proyecto
 from src.io_utils import cargar_imagen, cargar_mascara, listar_pares_imagen_mascara
@@ -59,6 +60,8 @@ def entrenar(
 
         X_list.append(X_raw)
         y_list.append(y_sp)
+        del img_rgb, gt, sp, esp # Borrar variables pesadas de la imagen actual
+        gc.collect()  # Forzar libreación de memoria RAM
 
     X_all = np.vstack(X_list)
     y_all = np.concatenate(y_list)
