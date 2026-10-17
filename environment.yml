@@ -16,3 +16,7 @@ dependencies:
   - joblib
   - streamlit
   - opencv-python
+  - pytest
+  - pip
+  - pip: 
+    - opencv-python
