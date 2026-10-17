@@ -6,3 +6,4 @@ data/masks/
 results/
 src/*.pdf
 notebooks/*.txt
+*.joblib

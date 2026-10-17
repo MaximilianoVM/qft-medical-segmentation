@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  qft-app:
+    build: .
+    container_name: qft_medical_segmentation
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./modelos:/app/modelos
+      - ./data:/app/data
+    restart: unless-stopped
