@@ -5,7 +5,7 @@ Implementación de los Pasos 9 y 10: Reconstrucción de máscara y evaluación
 """
 
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def reconstruir_mascara(regiones_sp: list[np.ndarray], y_pred: np.ndarray, forma: tuple[int, int]) -> np.ndarray:
     """
@@ -92,3 +92,35 @@ def calcular_metricas(mascara_pred: np.ndarray, mascara_real: np.ndarray, eps: f
         "precision": precision,
         "recall": recall,
     }
+    
+        
+def plot_segmentation_results(image: np.ndarray, true_mask: np.ndarray, pred_mask: np.ndarray, save_path: str = None):
+    """
+    Genera una figura comparativa de 3 paneles: Imagen RGB, Ground Truth y Predicción QFT.
+    Si se especifica save_path, guarda la imagen con alta resolución (300 DPI) para el reporte.
+    """
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+    # Panel 1: Imagen original
+    axes[0].imshow(image)
+    axes[0].set_title("Imagen Médica RGB", fontweight="bold")
+
+    # Panel 2: Ground Truth
+    axes[1].imshow(true_mask, cmap="gray")
+    axes[1].set_title("Máscara Real (Ground Truth)", fontweight="bold")
+
+    # Panel 3: Predicción del modelo
+    axes[2].imshow(pred_mask, cmap="gray")
+    axes[2].set_title("Predicción QFT + SLIC", fontweight="bold")
+
+    # Desactivar ejes para estética limpia
+    for ax in axes:
+        ax.axis("off")
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.close(fig)
+    else:
+        plt.show()
