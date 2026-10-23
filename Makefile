@@ -1,12 +1,14 @@
-.PHONY: check test figures demo docker-build
+.PHONY: check test figures demo docker-build local_pdf reporte_pdf
 
 check:
 	flake8 src/ tests/
 	black --check src/ tests/
 
 
-MODEL ?= modelos/modelo_rf_30_k85_u09.joblib
+MODEL ?= modelos/modelo_rf_fase4.joblib
 JOBS ?=
+EVAL_COUNT ?= 30
+FIG_DIR ?= paper/figures
 TEST_IMG ?= data/raw/test/ISIC_0000003.jpg
 TEST_MASK ?= data/masks/test/ISIC_0000003_Segmentation.png
 
@@ -16,7 +18,7 @@ test:
 	pytest tests/
 
 figures:
-	python -m src.generate_figures --modelo $(MODEL) --eval-count 30 $(if $(JOBS),--jobs $(JOBS))
+	python -m src.generate_figures --modelo $(MODEL) --eval-count $(EVAL_COUNT) --salida $(FIG_DIR) $(if $(JOBS),--jobs $(JOBS))
 
 streamlit:
 	streamlit run src/app_streamlit.py
@@ -29,3 +31,11 @@ docker-develop:
 
 docker-demo:
 	docker-compose up demo
+
+# Compila paper/paper.pdf con la misma imagen que usa la GitHub Action de JOSS
+local_pdf:
+	docker run --rm -v "$(CURDIR)/paper:/data" -u $$(id -u):$$(id -g) openjournals/inara -o pdf -p paper.md
+
+# Compila reporte/reporte.pdf (LaTeX + biber) con la TeX Live de la misma imagen
+reporte_pdf:
+	docker run --rm -v "$(CURDIR)/reporte:/data" -w /data -u $$(id -u):$$(id -g) -e HOME=/tmp --entrypoint latexmk openjournals/inara -pdf -interaction=nonstopmode -halt-on-error reporte.tex
