@@ -23,6 +23,7 @@ from src.quaternion_qft import procesar_qft_superpixeles
 from src.feature_extraction import extraer_matriz_caracteristicas, normalizar_caracteristicas
 from src.classification import etiquetar_superpixeles, predecir
 from src.evaluation import reconstruir_mascara, calcular_metricas
+from skimage.segmentation import mark_boundaries
 
 _CLF = None
 
@@ -118,6 +119,10 @@ def generar_matriz_confusion_modelo(resultados_eval, dir_figures: Path):
 def evaluar_test_y_generar_histogramas(resultados_eval, dir_figures: Path):
     print("📊 Generando histogramas y comparativa de casos...")
     df = pd.DataFrame([r["metrics"] for r in resultados_eval])
+    # métricas por imagen y resumen, para citarlas en el reporte sin copiarlas a mano
+    df.to_csv(dir_figures / "metricas_test.csv", index=False)
+    df[["iou", "dice", "precision", "recall"]].agg(["mean", "std", "min", "max"]).to_csv(
+        dir_figures / "metricas_resumen.csv")
 
     # 1. Histogramas
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -164,16 +169,46 @@ def evaluar_test_y_generar_histogramas(resultados_eval, dir_figures: Path):
     print(f"  ✓ Guardado en: {out_cases}")
 
 
+def generar_figura_proceso(r_img, r_mask, dir_figures: Path, n_segmentos):
+    """Figura del proceso: imagen RGB, superpíxeles SLIC, Ground Truth y etiquetado por superpíxel (τ = 0.9)."""
+    print("📊 Generando figura del proceso de etiquetado...")
+    img, mask = cargar_imagen(r_img), cargar_mascara(r_mask)
+    sp = presegmentar_superpixeles(img, n_segmentos=n_segmentos)
+    etiquetas_sp = np.zeros(img.shape[:2], dtype=int)
+    for idx, region in enumerate(sp):
+        etiquetas_sp[region] = idx
+    y_gt = etiquetar_superpixeles(sp, mask, umbral=0.9)
+    m_gt = reconstruir_mascara(sp, y_gt, forma=img.shape[:2])
+
+    paneles = [
+        (img, None, "(1) Imagen RGB"),
+        (mark_boundaries(img, etiquetas_sp, color=(1, 1, 0)), None, f"(2) SLIC (k = {n_segmentos})"),
+        (mask, "gray", "(3) Ground Truth"),
+        (m_gt, "gray", "(4) Etiquetas por superpíxel (τ = 0.9)"),
+    ]
+    fig, axes = plt.subplots(1, 4, figsize=(16, 3.6))
+    for ax, (datos, cmap, titulo) in zip(axes, paneles):
+        ax.imshow(datos, cmap=cmap)
+        ax.set_title(titulo)
+        ax.axis("off")
+    plt.tight_layout()
+    out_path = dir_figures / "segmentation_process.png"
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"  ✓ Guardada en: {out_path}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Genera todas las figuras necesarias para el reporte JOSS")
     parser.add_argument("-m", "--modelo", type=str, required=True, help="Ruta al archivo .joblib del modelo")
     parser.add_argument("-k", "--superpixeles", type=int, default=85, help="Número de superpíxeles")
     parser.add_argument("-n", "--eval-count", type=int, default=30, help="Número de imágenes a evaluar")
+    parser.add_argument("-o", "--salida", type=str, default="paper/figures", help="Directorio de salida de las figuras")
     parser.add_argument("-j", "--jobs", type=int, default=None,
                         help="Procesos en paralelo (por defecto: N_JOBS o estimado según la RAM disponible)")
     args = parser.parse_args()
 
-    dir_figures = Path("paper/figures")
+    dir_figures = Path(args.salida)
     dir_figures.mkdir(parents=True, exist_ok=True)
 
     pares_test = listar_pares_imagen_mascara("data/raw/test", "data/masks/test")[:args.eval_count]
@@ -191,6 +226,8 @@ if __name__ == "__main__":
     if resultados:
         generar_matriz_confusion_modelo(resultados, dir_figures)
         evaluar_test_y_generar_histogramas(resultados, dir_figures)
+        mejor = max(resultados, key=lambda r: r["metrics"]["iou"])["metrics"]
+        generar_figura_proceso(mejor["r_img"], mejor["r_mask"], dir_figures, args.superpixeles)
         print("✨ ¡Todas las figuras del reporte fueron generadas con éxito!")
     else:
         print("❌ No se pudieron procesar las imágenes.")
