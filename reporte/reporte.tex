@@ -1,0 +1,258 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric-comp,sorting=none]{biblatex}
+\addbibresource{referencias.bib}
+\usepackage[hidelinks]{hyperref}
+\usepackage[spanish,noabbrev]{cleveref}
+
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Segmentación Cuaterniónica QFT}
+\fancyhead[R]{\small Proyecto de Investigación I --- CIMAT}
+\fancyfoot[C]{\thepage}
+
+% Comando para valores aún no confirmados
+\newcommand{\pendiente}[1]{\textcolor{red}{[#1]}}
+
+\begin{document}
+
+\begin{center}
+  {\large Centro de Investigación en Matemáticas (CIMAT)}\\[2pt]
+  Maestría en Modelación y Optimización de Procesos\\[2pt]
+  \small Proyecto de Investigación I \hfill Semestre 2026-II\\[14pt]
+  {\LARGE\bfseries Identificación de Lesiones Dermatológicas a través de\\[3pt]
+   Segmentación por Superpíxeles, Transformada\\[3pt]
+   Cuaterniónica y Clasificación mediante Random Forest\par}
+  \vspace{12pt}
+  Maximiliano Vaca \quad y \quad Pablo Alvarado\\[2pt]
+  \small\texttt{maximiliano.vaca@cimat.mx}, \texttt{pablo.alvarado@cimat.mx}\\[2pt]
+  \small Metodología propuesta por: Dr.\ Alberto López Alanís\\[2pt]
+  \small Código: \url{https://github.com/MaximilianoVM/qft-medical-segmentation}
+\end{center}
+
+\begin{abstract}
+\noindent
+Se presenta un sistema automatizado para segmentar lesiones cutáneas en imágenes
+dermatoscópicas. El método divide cada imagen en $k = 85$ superpíxeles con SLIC,
+representa el color RGB de cada píxel como un cuaternión puro, aplica la
+Transformada Cuaterniónica de Fourier 2D (QFT) sobre cada superpíxel y resume su
+espectro en cinco descriptores (magnitud media, desviación estándar, máximo,
+energía y entropía). Un clasificador Random Forest decide si cada superpíxel
+pertenece a la lesión, y la máscara final se reconstruye a partir de esas
+decisiones. Evaluado sobre las 379 imágenes del conjunto oficial de prueba de
+ISIC 2016, el sistema obtiene \RESUMENRESULTADOS. El análisis muestra que el
+método funciona bien en lesiones de alto contraste y falla cuando la lesión y la
+piel tienen tonos parecidos.
+\end{abstract}
+
+\noindent\textbf{Palabras clave:} segmentación de imágenes médicas, superpíxeles
+SLIC, Transformada Cuaterniónica de Fourier, Random Forest, ISIC 2016.
+
+%=====================================================================
+\section{Introducción}
+
+La detección automática de lesiones en imágenes dermatológicas debe lidiar con
+la variabilidad de la pigmentación, bordes irregulares y artefactos como vello o
+reflejos. Muchos métodos clásicos procesan cada canal de color por separado o
+convierten la imagen a escala de grises, con lo que pierden la correlación entre
+canales. Este trabajo aborda el problema con dos ideas:
+
+\begin{enumerate}
+  \item \textbf{Superpíxeles como unidad de decisión.} SLIC agrupa la imagen en
+  $k$ regiones contiguas y homogéneas \cite{achanta2012slic}. Clasificar
+  regiones en lugar de píxeles reduce el costo computacional y hace que cada
+  decisión use información local de textura.
+  \item \textbf{Color como cuaternión.} Cada píxel RGB se codifica como un
+  cuaternión puro y se analiza con la QFT
+  \cite{sangwine1996fourier,ell2007hypercomplex}, de modo que los tres canales se
+  transforman como una sola entidad y no como tres señales independientes.
+\end{enumerate}
+
+%=====================================================================
+\section{Marco teórico}
+
+\subsection{Presegmentación en superpíxeles (SLIC)}
+SLIC adapta $k$-means a un espacio de cinco dimensiones: color CIELAB $(L,a,b)$
+y posición $(x,y)$. La distancia entre un píxel $i$ y un centro $j$ combina
+ambas partes:
+\begin{equation}
+  d_{lab} = \sqrt{(L_i-L_j)^2 + (a_i-a_j)^2 + (b_i-b_j)^2}, \qquad
+  d_{xy}  = \sqrt{(x_i-x_j)^2 + (y_i-y_j)^2},
+\end{equation}
+\begin{equation}
+  D_s = \sqrt{d_{lab}^2 + \left(\frac{m}{S}\right)^2 d_{xy}^2},
+\end{equation}
+donde $S = \sqrt{N/k}$ es el intervalo de muestreo para una imagen de $N$ píxeles
+y $m$ controla la compacidad (en este trabajo $m = 10$ y 10 iteraciones).
+
+\subsection{Representación cuaterniónica de imágenes RGB}
+Un cuaternión es $q = w + x\,\mathbf{i} + y\,\mathbf{j} + z\,\mathbf{k}$, con
+$\mathbf{i}^2 = \mathbf{j}^2 = \mathbf{k}^2 = \mathbf{ijk} = -1$. Cada píxel se
+codifica como un cuaternión puro (parte real nula), con los canales normalizados
+a $[0,1]$:
+\begin{equation}
+  q(x,y) = R(x,y)\,\mathbf{i} + G(x,y)\,\mathbf{j} + B(x,y)\,\mathbf{k}.
+\end{equation}
+
+\subsection{Transformada Cuaterniónica de Fourier 2D}
+Como la multiplicación de cuaterniones no es conmutativa, existen varias
+definiciones de la QFT. La implementación usa la forma \emph{bilateral}
+\cite{ell2007hypercomplex}, con el núcleo $\mathbf{i}$ a la izquierda sobre las
+filas y el núcleo $\mathbf{j}$ a la derecha sobre las columnas. Para una región de
+$M\times N$ píxeles:
+\begin{equation}
+  F(u,v) = \frac{1}{\sqrt{MN}} \sum_{x=0}^{M-1}\sum_{y=0}^{N-1}
+  e^{-\mathbf{i}\,2\pi \frac{ux}{M}}\; q(x,y)\; e^{-\mathbf{j}\,2\pi \frac{vy}{N}}.
+  \label{eq:qft}
+\end{equation}
+En la práctica, \cref{eq:qft} se calcula sin aritmética de cuaterniones: se
+obtiene la transformada de cada canal real con FFT en cascada (primero sobre $y$
+con la unidad $\mathbf{j}$, luego sobre $x$ con $\mathbf{i}$) y las cuatro
+componentes resultantes de los tres canales se combinan en un único cuaternión
+por canal espectral.
+
+\subsection{Descriptores espectrales}
+De cada espectro se calcula la magnitud cuaterniónica
+$|F(u,v)| = \sqrt{F_w^2 + F_x^2 + F_y^2 + F_z^2}$ y, a partir de ella, un vector
+de cinco características: media, desviación estándar y máximo de $|F|$, la
+energía $E = \frac{1}{MN}\sum_{u,v}|F(u,v)|^2$ y la entropía de Shannon
+$H = -\sum_{u,v} p(u,v)\log_2 p(u,v)$ con $p(u,v) = |F(u,v)|^2 / \sum|F|^2$.
+Las características se estandarizan por \emph{z-score} entre los superpíxeles de
+cada imagen.
+
+\subsection{Etiquetado supervisado y clasificación}
+Para entrenar, cada superpíxel $S_i$ recibe una etiqueta según su traslape con la
+máscara de referencia (\emph{Ground Truth}, GT):
+\begin{equation}
+  y_i =
+  \begin{cases}
+    1, & \text{si } \dfrac{|S_i \cap GT|}{|S_i|} \ge \tau, \\[4pt]
+    0, & \text{en otro caso,}
+  \end{cases}
+\end{equation}
+con $\tau = 0.9$. Un Random Forest \cite{breiman2001random} aprende a asignar
+estas etiquetas a partir de los cinco descriptores. En la predicción, cada píxel
+toma la clase de su superpíxel, lo que produce una máscara binaria
+$M_{pred}(x,y)\in\{0,1\}$ (exportada como $0$--$255$).
+
+\subsection{Métricas de evaluación}
+La máscara predicha $P$ se compara píxel a píxel con la de referencia $G$:
+\begin{equation}
+  \mathrm{IoU} = \frac{|P\cap G|}{|P\cup G|},\quad
+  \mathrm{Dice} = \frac{2|P\cap G|}{|P|+|G|},\quad
+  \mathrm{Precisión} = \frac{|P\cap G|}{|P|},\quad
+  \mathrm{Recall} = \frac{|P\cap G|}{|G|}.
+\end{equation}
+
+%=====================================================================
+\section{Metodología}
+
+El proyecto sigue el esquema propuesto por el Dr.\ Alberto López Alanís
+\cite{lopez2023apuntes}, organizado en tres fases (\cref{fig:pipeline}).
+Los datos provienen de ISIC 2016 \cite{gutman2016skin}: 900 imágenes de
+entrenamiento y 379 de prueba, cada una con su máscara de referencia.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  caja/.style={draw, rounded corners=2pt, fill=white, align=center,
+               text width=3.4cm, minimum height=0.95cm},
+  fase/.style={font=\footnotesize\bfseries, align=center},
+  flecha/.style={-{Stealth[length=2mm]}, thick},
+  node distance=0.42cm
+]
+  % Fase 1
+  \node[fase] (f1) {01 Extracción de\\características};
+  \node[caja, below=0.3cm of f1] (a1) {\textbf{Carga de imágenes}\\RGB + máscara GT};
+  \node[caja, below=of a1] (a2) {\textbf{Superpíxeles SLIC}\\$k = 85$ regiones};
+  \node[caja, below=of a2] (a3) {\textbf{QFT 2D}\\por superpíxel};
+  \node[caja, below=of a3] (a4) {\textbf{Rasgos espectrales}\\magnitud, energía,\\entropía};
+  % Fase 2
+  \node[fase] (f2) at ($(f1)+(4.9,0)$) {02 Clasificación\\supervisada};
+  \node[caja, below=0.3cm of f2] (b1) {\textbf{Normalización}\\z-score por imagen};
+  \node[caja, below=of b1] (b2) {\textbf{Etiquetado GT}\\traslape $\ge \tau = 0.9$};
+  \node[caja, below=of b2] (b3) {\textbf{Random Forest}\\entrenamiento};
+  \node[caja, below=of b3] (b4) {\textbf{Predicción regional}\\lesión / piel sana};
+  % Fase 3
+  \node[fase] (f3) at ($(f2)+(4.9,0)$) {03 Reconstrucción\\y evaluación};
+  \node[caja, below=0.3cm of f3] (c1) {\textbf{Reconstrucción}\\etiqueta por píxel};
+  \node[caja, below=of c1] (c2) {\textbf{Máscara binaria}\\$\{0,1\}$ $\to$ $0$--$255$};
+  \node[caja, below=of c2] (c3) {\textbf{Evaluación}\\IoU, Dice,\\precisión, recall};
+
+  \begin{scope}[on background layer]
+    \node[fill=blue!6, rounded corners, fit=(f1)(a4), inner sep=5pt] {};
+    \node[fill=green!7, rounded corners, fit=(f2)(b4), inner sep=5pt] {};
+    \node[fill=orange!8, rounded corners, fit=(f3)(c3), inner sep=5pt] {};
+  \end{scope}
+
+  \foreach \u/\v in {a1/a2, a2/a3, a3/a4, b1/b2, b2/b3, b3/b4, c1/c2, c2/c3}
+    \draw[flecha] (\u) -- (\v);
+  \draw[flecha] (a4.east) -- ++(0.65,0) |- (b1.west);
+  \draw[flecha] (b4.east) -- ++(0.65,0) |- (c1.west);
+\end{tikzpicture}
+\caption{Pipeline metodológico: extracción de rasgos espectrales cuaterniónicos
+por superpíxel, clasificación con Random Forest y reconstrucción y evaluación de
+la máscara final.}
+\label{fig:pipeline}
+\end{figure}
+
+%=====================================================================
+\section{Implementación}
+
+El código está escrito en Python y organizado en módulos dentro de \texttt{src/}:
+
+\begin{itemize}
+  \item \texttt{io\_utils.py}: carga de imágenes RGB y máscaras, y emparejamiento
+        imagen--máscara.
+  \item \texttt{slic\_custom.py} y \texttt{presegmentation.py}: implementación
+        propia de SLIC (con alternativa \texttt{skimage.segmentation.slic}).
+  \item \texttt{quaternion\_qft.py}: conversión a cuaterniones puros y QFT 2D sobre
+        la caja delimitadora de cada superpíxel.
+  \item \texttt{feature\_extraction.py}: descriptores espectrales y normalización.
+  \item \texttt{classification.py}: etiquetado por traslape y entrenamiento de
+        Random Forest, SVM y KNN.
+  \item \texttt{evaluation.py}: reconstrucción de la máscara y métricas.
+  \item \texttt{generate\_figures.py}: evaluación en paralelo sobre el conjunto de
+        prueba y generación de todas las figuras de este reporte.
+\end{itemize}
+
+El proyecto incluye pruebas unitarias con \texttt{pytest}, un entorno
+reproducible en Docker y una interfaz interactiva en Streamlit. Las figuras y
+tablas de resultados se generan con \texttt{make figures}, y este documento se
+compila automáticamente en GitHub Actions.
+
+\MODELOENTRENAMIENTO
+
+%=====================================================================
+\section{Resultados y discusión}
+
+\RESULTADOS
+
+%=====================================================================
+\section{Conclusiones y trabajo futuro}
+
+\CONCLUSIONES
+
+\printbibliography[title={Referencias}]
+
+\end{document}
