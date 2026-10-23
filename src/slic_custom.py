@@ -15,6 +15,7 @@ donde:
     m  = compacidad (controla peso relativo color vs. espacio)
 """
 
+from collections import deque
 from tabnanny import verbose
 
 import numpy as np
@@ -147,11 +148,11 @@ def enforce_connectivity(labels, S):
             # Flood fill (BFS) de la componente conexa que contiene (y, x)
             component = [(y, x)]
             new_labels[y, x] = label_counter
-            queue = [(y, x)]
+            queue = deque([(y, x)])
             adjacent_label = old_label
 
             while queue:
-                cy, cx = queue.pop(0)  # BFS con lista simple
+                cy, cx = queue.popleft()  # BFS (cola FIFO O(1))
                 for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                     ny, nx = cy + dy, cx + dx
                     if 0 <= ny < H and 0 <= nx < W and new_labels[ny, nx] == -1:

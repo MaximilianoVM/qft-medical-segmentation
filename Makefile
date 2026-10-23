@@ -6,6 +6,7 @@ check:
 
 
 MODEL ?= modelos/modelo_rf_30_k85_u09.joblib
+JOBS ?=
 TEST_IMG ?= data/raw/test/ISIC_0000003.jpg
 TEST_MASK ?= data/masks/test/ISIC_0000003_Segmentation.png
 
@@ -15,7 +16,7 @@ test:
 	pytest tests/
 
 figures:
-	python -m src.generate_figures --modelo $(MODEL) --imagen $(TEST_IMG) --mascara $(TEST_MASK)
+	python -m src.generate_figures --modelo $(MODEL) --eval-count 30 $(if $(JOBS),--jobs $(JOBS))
 
 streamlit:
 	streamlit run src/app_streamlit.py

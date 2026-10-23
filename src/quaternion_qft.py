@@ -136,7 +136,8 @@ def procesar_qft_superpixeles(
     Retorna:
         list[np.ndarray]: Lista de K matrices espectrales F_k de dimensiones (M_k, N_k, 4).
     """
-    q_img = rgb_a_cuaternion(imagen_rgb)
+    # La conversión se hace por bounding box para no tener en memoria
+    # la imagen cuaterniónica completa (H, W, 4) en float64.
     espectros_qft = []
 
     for idx, mask in enumerate(lista_mascaras):
@@ -151,7 +152,7 @@ def procesar_qft_superpixeles(
         cmin, cmax = int(columnas.min()), int(columnas.max())
 
         # Submatriz local y enmascaramiento
-        sub_q = q_img[rmin:rmax + 1, cmin:cmax + 1].copy()
+        sub_q = rgb_a_cuaternion(imagen_rgb[rmin:rmax + 1, cmin:cmax + 1])
         sub_mask = mask[rmin:rmax + 1, cmin:cmax + 1]
         sub_q[~sub_mask] = 0.0
 
