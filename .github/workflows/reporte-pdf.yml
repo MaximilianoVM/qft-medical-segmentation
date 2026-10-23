@@ -3,28 +3,25 @@ name: Reporte PDF
 on:
   push:
     branches: [ master, main, develop ]
-    paths: [ 'reporte/**', '.github/workflows/reporte-pdf.yml' ]
+    paths: [ 'paper/**', 'Makefile', '.github/workflows/reporte-pdf.yml' ]
   pull_request:
     branches: [ master, main ]
-    paths: [ 'reporte/**', '.github/workflows/reporte-pdf.yml' ]
+    paths: [ 'paper/**', 'Makefile', '.github/workflows/reporte-pdf.yml' ]
   workflow_dispatch:
 
 jobs:
   reporte:
     runs-on: ubuntu-latest
-    name: Reporte LaTeX
+    name: Reporte (sin plantilla JOSS)
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Build Reporte PDF
-        uses: xu-cheng/latex-action@v3
-        with:
-          root_file: reporte.tex
-          working_directory: reporte
+        run: make reporte_pdf
 
       - name: Upload PDF Artifact
         uses: actions/upload-artifact@v4
         with:
           name: reporte
-          path: reporte/reporte.pdf
+          path: paper/reporte.pdf

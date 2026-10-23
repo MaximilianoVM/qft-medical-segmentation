@@ -36,6 +36,9 @@ docker-demo:
 local_pdf:
 	docker run --rm -v "$(CURDIR)/paper:/data" -u $$(id -u):$$(id -g) openjournals/inara -o pdf -p paper.md
 
-# Compila reporte/reporte.pdf (LaTeX + biber) con la TeX Live de la misma imagen
+# Compila paper/reporte.pdf: mismo paper.md, figuras y métricas que el PDF de JOSS,
+# pero con la plantilla "preprint" de inara (artículo simple, sin marca de JOSS)
 reporte_pdf:
-	docker run --rm -v "$(CURDIR)/reporte:/data" -w /data -u $$(id -u):$$(id -g) -e HOME=/tmp --entrypoint latexmk openjournals/inara -pdf -interaction=nonstopmode -halt-on-error reporte.tex
+	docker run --rm -v "$(CURDIR)/paper:/data" -u $$(id -u):$$(id -g) -e HOME=/tmp openjournals/inara -o preprint -- paper.md --variable=lang:es-MX
+	docker run --rm -v "$(CURDIR)/paper:/data" -w /data -u $$(id -u):$$(id -g) -e HOME=/tmp --entrypoint latexmk openjournals/inara -pdf -interaction=nonstopmode -halt-on-error -outdir=build paper.preprint.tex
+	cp paper/build/paper.preprint.pdf paper/reporte.pdf

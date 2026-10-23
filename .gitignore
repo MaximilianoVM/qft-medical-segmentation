@@ -7,3 +7,7 @@ results/
 src/*.pdf
 notebooks/*.txt
 *.joblib
+paper/paper.pdf
+paper/reporte.pdf
+paper/paper.preprint.tex
+paper/build/
