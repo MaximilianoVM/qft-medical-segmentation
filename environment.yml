@@ -13,10 +13,11 @@ dependencies:
   - Pillow
   - typer 
   - rich 
-  - joblib
+  - joblib>=1.3
   - streamlit
   - opencv-python
   - pytest
   - pip
   - pip: 
     - opencv-python
+    - tqdm
